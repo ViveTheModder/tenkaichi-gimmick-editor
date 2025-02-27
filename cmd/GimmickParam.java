@@ -15,6 +15,11 @@ public class GimmickParam
 	{
 		RandomAccessFile raf = new RandomAccessFile(pak,"rw");
 		int numPakContents = LittleEndian.getInt(raf.readInt());
+		if (numPakContents<0) //prevent negative seek offset
+		{
+			numPakContents = LittleEndian.getInt(numPakContents);
+			gui.Main.wiiMode = true;
+		}
 		raf.seek((numPakContents+1)*4);
 		int fileSize = LittleEndian.getInt(raf.readInt());
 		int actualFileSize = (int) pak.length();
@@ -29,6 +34,12 @@ public class GimmickParam
 		{
 			//return false if there are no model parts in the header
 			if (i==0 && gimmick[i]==0) return false;
+			if (i==3)
+			{
+				//check for byte order based on the last byte of the first float
+				if (!(gimmick[i]>0x39 && gimmick[i]<0x4A)) gui.Main.wiiMode = true; //positive float
+				else if (!(gimmick[i]>0xB9 && gimmick[i]<0xCA)) gui.Main.wiiMode = true; //negative float
+			}
 			//otherwise, make sure there is at least a valid one
 			if (gimmick[i]>=71 && gimmick[i]<=94) return true;
 		}

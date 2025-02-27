@@ -1,5 +1,5 @@
 package gui;
-//Tenkaichi Gimmick Editor by ViveTheModder
+//Tenkaichi Gimmick Editor v1.1 by ViveTheModder
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Image;
@@ -29,13 +29,14 @@ import cmd.LittleEndian;
 
 public class Main 
 {
+	public static boolean wiiMode = false;
 	private static final Toolkit DEF_TOOLKIT = Toolkit.getDefaultToolkit();
 	private static final Image ICON = DEF_TOOLKIT.getImage(ClassLoader.getSystemResource("img/icon.png"));
 	private static final String FONT_FAMILY = "font-family: Tahoma, Geneva, sans-serif; text-align: center; ";
 	private static final String HTML_START = "<html><div style='"+FONT_FAMILY+"font-size: 14px;'>";
 	private static final String HTML_TITLE = "<html><div style='"+FONT_FAMILY+"font-size: 20px; font-weight: bold; color: orange;'>";
 	private static final String HTML_END = "</div></html>";
-	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor";
+	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor v1.1";
 	private static File getFileFromChooser() throws IOException
 	{
 		File pakOrDat=null;
