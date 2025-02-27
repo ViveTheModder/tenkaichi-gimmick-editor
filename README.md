@@ -24,3 +24,11 @@ Before:
 After:
 
 ![img-6](https://github.com/user-attachments/assets/1988a2d4-5089-495f-acda-65a636a8a654)
+
+It can also import data from other PAK or ``022_gimmick_param.dat`` files.
+
+![img-7](https://github.com/user-attachments/assets/8957cb37-50b7-405d-a65f-80e0c4d057d3)
+
+![img-8](https://github.com/user-attachments/assets/1f0d04fe-66eb-4399-a94d-f64e48f1b64a)
+
+![img-9](https://github.com/user-attachments/assets/70ca9842-dc4f-44b1-b1ec-376dda33f7f6)
