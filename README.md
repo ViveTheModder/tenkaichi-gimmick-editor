@@ -1,5 +1,5 @@
 # tenkaichi-gimmick-editor
-A modding tool for the PS2 version of DBZ Budokai Tenkaichi 3 that allows editing the ``022_gimmick_param.dat file`` found in character costumes, which allows model parts (like the hair ones) to move independently.
+A modding tool for the PS2 & Wii version of DBZ Budokai Tenkaichi 3 that allows editing the ``022_gimmick_param.dat file`` found in character costumes, which allows model parts (like the hair ones) to move independently.
 
 Requested by [kuxxi. (FW)](https://www.youtube.com/@kuxxi.) and [Bεzzo](https://www.youtube.com/@BezzoIsTaken)... talk about popular demand.
 
