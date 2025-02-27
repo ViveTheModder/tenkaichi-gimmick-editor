@@ -1,9 +1,10 @@
 package cmd;
-import java.io.File;
 //Gimmick Parameter class by ViveTheModder
+import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import javax.swing.JTable;
+import javax.swing.table.TableModel;
 import gui.FloatTableModel;
 
 public class GimmickParam 
@@ -17,7 +18,7 @@ public class GimmickParam
 		int numPakContents = LittleEndian.getInt(raf.readInt());
 		if (numPakContents<0) //prevent negative seek offset
 		{
-			numPakContents = LittleEndian.getInt(numPakContents);
+			numPakContents = LittleEndian.getInt(numPakContents); //reverse byte order
 			gui.Main.wiiMode = true;
 		}
 		raf.seek((numPakContents+1)*4);
@@ -85,13 +86,28 @@ public class GimmickParam
 				byte[] floatBytes = new byte[4];
 				System.arraycopy(gimmick, pos, floatBytes, 0, 4);
 				float result = LittleEndian.getFloatFromByteArray(floatBytes);
-				data[i][j] = result;//Float.toString(result);
+				data[i][j] = result;
 				pos+=4;
 			}
 		}
 		FloatTableModel model = new FloatTableModel(data,modelPartNames);
 		JTable table = new JTable(model);
 		return table;
+	}
+	public static void setGimmickTableFromModel(TableModel model, byte[] contents, int rows, int cols)
+	{
+		for (int i=0; i<rows; i++)
+		{
+			int pos = FLOAT_SET_POSITIONS[i];
+			for (int j=0; j<cols; j++)
+			{
+				byte[] floatBytes = new byte[4];
+				System.arraycopy(contents, pos, floatBytes, 0, 4);
+				float result = LittleEndian.getFloatFromByteArray(floatBytes);
+				model.setValueAt(result,i,j);
+				pos+=4;
+			}
+		}
 	}
 	public static void setGimmickParam(File pakOrDat, byte[] contents) throws IOException
 	{

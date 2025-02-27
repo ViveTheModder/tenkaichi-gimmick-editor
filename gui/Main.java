@@ -1,5 +1,5 @@
 package gui;
-//Tenkaichi Gimmick Editor v1.1 by ViveTheModder
+//Tenkaichi Gimmick Editor v1.2 by ViveTheModder
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Image;
@@ -29,18 +29,19 @@ import cmd.LittleEndian;
 
 public class Main 
 {
-	public static boolean wiiMode = false;
+	public static boolean wiiMode=false;
 	private static final Toolkit DEF_TOOLKIT = Toolkit.getDefaultToolkit();
 	private static final Image ICON = DEF_TOOLKIT.getImage(ClassLoader.getSystemResource("img/icon.png"));
 	private static final String FONT_FAMILY = "font-family: Tahoma, Geneva, sans-serif; text-align: center; ";
 	private static final String HTML_START = "<html><div style='"+FONT_FAMILY+"font-size: 14px;'>";
 	private static final String HTML_TITLE = "<html><div style='"+FONT_FAMILY+"font-size: 20px; font-weight: bold; color: orange;'>";
 	private static final String HTML_END = "</div></html>";
-	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor v1.1";
-	private static File getFileFromChooser() throws IOException
+	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor v1.2";
+	private static File getFileFromChooser(int btnIndex) throws IOException
 	{
 		File pakOrDat=null;
 		JFileChooser chooser = new JFileChooser();
+		String[] chooserActions = {"Open","Import"};
 		FileNameExtensionFilter datFilter = new FileNameExtensionFilter("Model Part Movement File (022_gimmick_param.dat)", new String[]{"dat"});
 		FileNameExtensionFilter pakFilter = new FileNameExtensionFilter("Character Costume File (.PAK)", new String[]{"pak"});
 		chooser.addChoosableFileFilter(datFilter);
@@ -48,7 +49,7 @@ public class Main
 		chooser.setAcceptAllFileFilterUsed(false);
 		chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
 		chooser.setFileFilter(pakFilter);
-		chooser.setDialogTitle("Open File...");
+		chooser.setDialogTitle(chooserActions[btnIndex]+" File...");
 		while (true)
 		{
 			int result = chooser.showOpenDialog(chooser);
@@ -62,7 +63,11 @@ public class Main
 					{
 						pakOrDat=temp; break;
 					}
-					else JOptionPane.showMessageDialog(chooser, "This file is NOT a valid character costume file! Try again!", "Invalid File", 0);
+					else 
+					{
+						wiiMode=false; //disable Wii Mode in case it is accidentally enabled because of the isCharaCostumePak() method
+						JOptionPane.showMessageDialog(chooser, "This file is NOT a valid character costume file! Try again!", "Invalid File", 0);
+					}
 				}
 				else if (nameLower.endsWith(".dat"))
 				{
@@ -70,7 +75,11 @@ public class Main
 					{
 						pakOrDat=temp; break;
 					}
-					else JOptionPane.showMessageDialog(chooser, "This file is NOT a valid model part movement file! Try again!", "Invalid File", 0);
+					else 
+					{
+						wiiMode=false; //disable Wii Mode in case it is accidentally enabled because of the isValidGimmickParam() method
+						JOptionPane.showMessageDialog(chooser, "This file is NOT a valid model part movement file! Try again!", "Invalid File", 0);
+					}
 				}
 				//this line of code is technically unreachable, but I was not aware of setAcceptAllFileFilterUsed() up until now
 				else JOptionPane.showMessageDialog(chooser, "This file is NOT a valid file! Try again!", "Invalid File", 0);
@@ -85,7 +94,8 @@ public class Main
 		Box titleBox = Box.createHorizontalBox();
 		Image img = ICON.getScaledInstance(90, 90, Image.SCALE_SMOOTH);
 		ImageIcon imgIcon = new ImageIcon(img);
-		JButton btn = new JButton(HTML_START+"Apply Changes"+HTML_END);
+		JButton applyBtn = new JButton(HTML_START+"Apply Changes"+HTML_END);
+		JButton importBtn = new JButton(HTML_START+"Import Data from PAK/DAT"+HTML_END);
 		JFrame frame = new JFrame(WINDOW_TITLE+" - "+pakOrDat.getAbsolutePath());
 		JLabel iconLabel = new JLabel(" ");
 		JLabel title = new JLabel(HTML_TITLE+WINDOW_TITLE+"<br>by ViveTheModder"+HTML_END);
@@ -100,8 +110,8 @@ public class Main
 		tableHeader.setToolTipText("GIMMICK_HEAD often refers to hair model parts, while GIMMICK_CLOTH may refer to belt model parts.");
 		table.setFont(new Font("Tahoma", Font.PLAIN, 24));
 		table.setRowHeight(table.getRowHeight()+15);
-		//add action listener
-		btn.addActionListener(new ActionListener()
+		//add action listeners
+		applyBtn.addActionListener(new ActionListener()
 		{
 			@Override
 			public void actionPerformed(ActionEvent e) 
@@ -133,11 +143,39 @@ public class Main
 				}
 			}
 		});
+		importBtn.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent e) 
+			{
+				TableModel newModel = table.getModel();
+				try {
+					File importedFile = getFileFromChooser(1);
+					byte[] gimmick = GimmickParam.getGimmickParam(pakOrDat);
+					byte[] importedGimmick = GimmickParam.getGimmickParam(importedFile);
+					int numModelParts = newModel.getColumnCount();
+					int numFloatSets = newModel.getRowCount();
+					for (int i=0; i<numFloatSets; i++)
+					{
+						int posInPak = GimmickParam.FLOAT_SET_POSITIONS[i];
+						System.arraycopy(importedGimmick, posInPak, gimmick, posInPak, 4*numModelParts);
+					}
+					GimmickParam.setGimmickParam(pakOrDat,gimmick);
+					GimmickParam.setGimmickTableFromModel(newModel, gimmick, numFloatSets, numModelParts);
+					DEF_TOOLKIT.beep();
+					JOptionPane.showMessageDialog(frame, "Gimmick data imported successfully!", WINDOW_TITLE, 1);
+					
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+			}
+		});
 		//add components
 		titleBox.add(iconLabel);
 		titleBox.add(title);
 		header.add(titleBox);
-		footer.add(btn);
+		footer.add(applyBtn);
+		footer.add(importBtn);
 		frame.add(header,BorderLayout.NORTH);
 		frame.add(pane,BorderLayout.CENTER);
 		frame.add(footer,BorderLayout.SOUTH);
@@ -154,7 +192,7 @@ public class Main
 		try 
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			File pakOrDat = getFileFromChooser();
+			File pakOrDat = getFileFromChooser(0);
 			if (pakOrDat!=null) setApp(pakOrDat);
 		} 
 		catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException | IOException e) 
