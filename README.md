@@ -1,7 +1,7 @@
 # tenkaichi-gimmick-editor
-A modding tool for the PS2 & Wii version of DBZ Budokai Tenkaichi 3 that allows editing the ``022_gimmick_param.dat file`` found in character costumes, which allows model parts (like the hair ones) to move independently.
+A modding tool for the PS2 & Wii version of DBZ Budokai Tenkaichi 2 & 3 that allows editing the ``022_gimmick_param`` or ``022_character_extra_animations`` DAT file found in character costumes, which allows model parts (like the hair ones) to move independently.
 
-Requested by [kuxxi. (FW)](https://www.youtube.com/@kuxxi.) and [Bεzzo](https://www.youtube.com/@BezzoIsTaken)... talk about popular demand.
+Requested by [kuxxi. (FW)](https://www.youtube.com/@kuxxi.), [Bεzzo](https://www.youtube.com/@BezzoIsTaken) and [Deelseton](https://www.youtube.com/@Deelseton)... talk about popular demand.
 
 The ``022_gimmick_param.dat`` file has nearly no research, so even though it contains particular bytes & shorts, the tool only supports editing the floats in that file, since they are the most important.
 
@@ -32,3 +32,10 @@ It can also import data from other PAK or ``022_gimmick_param.dat`` files.
 ![img-8](https://github.com/user-attachments/assets/1f0d04fe-66eb-4399-a94d-f64e48f1b64a)
 
 ![img-9](https://github.com/user-attachments/assets/70ca9842-dc4f-44b1-b1ec-376dda33f7f6)
+
+And with the release of v1.3, better error handling has been added.
+
+![img-10](https://github.com/user-attachments/assets/6fde10bc-1ff6-4897-b75f-9d8b05e4b94f)
+
+![img-11](https://github.com/user-attachments/assets/6a1ce986-c9e5-45cf-a103-5f6e13ce7df8)
+
