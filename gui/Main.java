@@ -1,5 +1,5 @@
 package gui;
-//Tenkaichi Gimmick Editor v1.2 by ViveTheModder
+//Tenkaichi Gimmick Editor v1.3 by ViveTheModder
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.Image;
@@ -29,20 +29,20 @@ import cmd.LittleEndian;
 
 public class Main 
 {
-	public static boolean wiiMode=false;
+	public static boolean[] wiiModes = new boolean[2];
 	private static final Toolkit DEF_TOOLKIT = Toolkit.getDefaultToolkit();
 	private static final Image ICON = DEF_TOOLKIT.getImage(ClassLoader.getSystemResource("img/icon.png"));
 	private static final String FONT_FAMILY = "font-family: Tahoma, Geneva, sans-serif; text-align: center; ";
 	private static final String HTML_START = "<html><div style='"+FONT_FAMILY+"font-size: 14px;'>";
 	private static final String HTML_TITLE = "<html><div style='"+FONT_FAMILY+"font-size: 20px; font-weight: bold; color: orange;'>";
 	private static final String HTML_END = "</div></html>";
-	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor v1.2";
-	private static File getFileFromChooser(int btnIndex) throws IOException
+	private static final String WINDOW_TITLE = "Tenkaichi Gimmick Editor v1.3";
+	private static File getFileFromChooser(int btnIndex, int fileIndex) throws IOException
 	{
 		File pakOrDat=null;
 		JFileChooser chooser = new JFileChooser();
 		String[] chooserActions = {"Open","Import"};
-		FileNameExtensionFilter datFilter = new FileNameExtensionFilter("Model Part Movement File (022_gimmick_param.dat)", new String[]{"dat"});
+		FileNameExtensionFilter datFilter = new FileNameExtensionFilter("022_gimmick_param, 022_character_extra_animations (.DAT)", new String[]{"dat"});
 		FileNameExtensionFilter pakFilter = new FileNameExtensionFilter("Character Costume File (.PAK)", new String[]{"pak"});
 		chooser.addChoosableFileFilter(datFilter);
 		chooser.addChoosableFileFilter(pakFilter);
@@ -59,34 +59,39 @@ public class Main
 				String nameLower = temp.getName().toLowerCase();
 				if (nameLower.endsWith(".pak"))
 				{
-					if (GimmickParam.isCharaCostumePak(temp)) 
+					if (GimmickParam.isCharaCostumePak(temp,fileIndex)) 
 					{
 						pakOrDat=temp; break;
 					}
 					else 
 					{
-						wiiMode=false; //disable Wii Mode in case it is accidentally enabled because of the isCharaCostumePak() method
+						wiiModes[fileIndex]=false; //disable Wii Mode in case it is accidentally enabled because of the isCharaCostumePak() method
+						errorBeep();
 						JOptionPane.showMessageDialog(chooser, "This file is NOT a valid character costume file! Try again!", "Invalid File", 0);
 					}
 				}
 				else if (nameLower.endsWith(".dat"))
 				{
-					if (GimmickParam.isValidGimmickParam(temp))
+					if (GimmickParam.isValidGimmickParam(temp,fileIndex))
 					{
 						pakOrDat=temp; break;
 					}
 					else 
 					{
-						wiiMode=false; //disable Wii Mode in case it is accidentally enabled because of the isValidGimmickParam() method
+						wiiModes[fileIndex]=false; //disable Wii Mode in case it is accidentally enabled because of the isValidGimmickParam() method
+						errorBeep();
 						JOptionPane.showMessageDialog(chooser, "This file is NOT a valid model part movement file! Try again!", "Invalid File", 0);
 					}
 				}
-				//this line of code is technically unreachable, but I was not aware of setAcceptAllFileFilterUsed() up until now
-				else JOptionPane.showMessageDialog(chooser, "This file is NOT a valid file! Try again!", "Invalid File", 0);
 			}
 			else break;
 		}
 		return pakOrDat;
+	}
+	private static void errorBeep()
+	{
+		Runnable runWinErrorSnd = (Runnable) DEF_TOOLKIT.getDesktopProperty("win.sound.exclamation");
+		if (runWinErrorSnd!=null) runWinErrorSnd.run();
 	}
 	private static void setApp(File pakOrDat) throws IOException
 	{
@@ -101,7 +106,7 @@ public class Main
 		JLabel title = new JLabel(HTML_TITLE+WINDOW_TITLE+"<br>by ViveTheModder"+HTML_END);
 		JPanel header = new JPanel();
 		JPanel footer = new JPanel();
-		JTable table = GimmickParam.getGimmickTable(pakOrDat);
+		JTable table = GimmickParam.getGimmickTable(pakOrDat,0);
 		JTableHeader tableHeader = table.getTableHeader();
 		JScrollPane pane = new JScrollPane(table);
 		//set component properties
@@ -138,8 +143,9 @@ public class Main
 					GimmickParam.setGimmickParam(pakOrDat,gimmick);
 					DEF_TOOLKIT.beep();
 					JOptionPane.showMessageDialog(frame, "Changes applied successfully!", WINDOW_TITLE, 1);
-				} catch (IOException e1) {
-					e1.printStackTrace();
+				} catch (Exception e1) {
+					errorBeep();
+					JOptionPane.showMessageDialog(frame, e1.getClass().getSimpleName()+": "+e1.getMessage(), "Exception", 0);
 				}
 			}
 		});
@@ -150,23 +156,49 @@ public class Main
 			{
 				TableModel newModel = table.getModel();
 				try {
-					File importedFile = getFileFromChooser(1);
+					File importedFile = getFileFromChooser(1,1);
 					byte[] gimmick = GimmickParam.getGimmickParam(pakOrDat);
 					byte[] importedGimmick = GimmickParam.getGimmickParam(importedFile);
-					int numModelParts = newModel.getColumnCount();
-					int numFloatSets = newModel.getRowCount();
-					for (int i=0; i<numFloatSets; i++)
+					if (GimmickParam.isValidGimmickParam(importedFile,1) || GimmickParam.isCharaCostumePak(importedFile,1))
 					{
-						int posInPak = GimmickParam.FLOAT_SET_POSITIONS[i];
-						System.arraycopy(importedGimmick, posInPak, gimmick, posInPak, 4*numModelParts);
+						if (GimmickParam.bt2Modes[0]==GimmickParam.bt2Modes[1] && wiiModes[0]==wiiModes[1])
+						{
+							int numModelParts = newModel.getColumnCount();
+							int numFloatSets = newModel.getRowCount();
+							for (int i=0; i<numFloatSets; i++)
+							{
+								int posInPak = GimmickParam.FLOAT_SET_POSITIONS[i];
+								System.arraycopy(importedGimmick, posInPak, gimmick, posInPak, 4*numModelParts);
+							}
+							GimmickParam.setGimmickParam(pakOrDat,gimmick);
+							GimmickParam.setGimmickTableFromModel(newModel, gimmick, numFloatSets, numModelParts);
+							DEF_TOOLKIT.beep();
+							JOptionPane.showMessageDialog(frame, "Gimmick data imported successfully!", WINDOW_TITLE, 1);
+						}
+						else
+						{
+							String[] fileStates = new String[2];
+							String[] fileNames = {pakOrDat.getName(), importedFile.getName()};
+							String msg="Currently opened file and imported file are incompatible!\n", regexToGetExt = "^.*\\.(.*)$";
+							for (int i=0; i<fileStates.length; i++)
+							{
+								if (GimmickParam.bt2Modes[i]) fileStates[i]="DBZBT2 File ("+fileNames[i].replaceAll(regexToGetExt, "$1")+")";
+								else fileStates[i]="DBZBT3 File ("+fileNames[i].replaceAll(regexToGetExt, "$1")+")";
+								if (wiiModes[i]) fileStates[i]+=", Big Endian (Wii)\n";
+								else fileStates[i]+=", Little Endian (PS2)\n";
+							}
+							errorBeep();
+							JOptionPane.showMessageDialog(frame, msg+fileStates[0]+fileStates[1], "Incompatible Files", 0);
+						}
 					}
-					GimmickParam.setGimmickParam(pakOrDat,gimmick);
-					GimmickParam.setGimmickTableFromModel(newModel, gimmick, numFloatSets, numModelParts);
-					DEF_TOOLKIT.beep();
-					JOptionPane.showMessageDialog(frame, "Gimmick data imported successfully!", WINDOW_TITLE, 1);
-					
-				} catch (IOException e1) {
-					e1.printStackTrace();
+					else 
+					{
+						errorBeep();
+						JOptionPane.showMessageDialog(frame, "This file is NOT a valid model part movement file!", "Invalid File", 0);
+					}
+				} catch (Exception e1) {
+					errorBeep();
+					JOptionPane.showMessageDialog(frame, e1.getClass().getSimpleName()+": "+e1.getMessage(), "Exception", 0);
 				}
 			}
 		});
@@ -192,7 +224,7 @@ public class Main
 		try 
 		{
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-			File pakOrDat = getFileFromChooser(0);
+			File pakOrDat = getFileFromChooser(0,0);
 			if (pakOrDat!=null) setApp(pakOrDat);
 		} 
 		catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException | IOException e) 

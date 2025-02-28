@@ -6,31 +6,66 @@ import java.io.RandomAccessFile;
 import javax.swing.JTable;
 import javax.swing.table.TableModel;
 import gui.FloatTableModel;
+import gui.Main;
 
 public class GimmickParam 
 {
-	public static final int[] FLOAT_SET_POSITIONS = {16,80,144,272,336,464,528,608,672};
+	public static final int[] FLOAT_SET_POSITIONS = new int[9];
+	public static boolean[] bt2Modes = new boolean[2];
 	private static final String[] MODEL_PARTS = {"MANTLE","HEAD","CLOTH"};
 	
-	public static boolean isCharaCostumePak(File pak) throws IOException
+	public static boolean isCharaCostumePak(File pak, int pakIndex) throws IOException
 	{
+		LittleEndian.wiiMode=false; //this reset is necessary for the imported file
 		RandomAccessFile raf = new RandomAccessFile(pak,"rw");
 		int numPakContents = LittleEndian.getInt(raf.readInt());
+		System.out.println(numPakContents);
 		if (numPakContents<0) //prevent negative seek offset
 		{
 			numPakContents = LittleEndian.getInt(numPakContents); //reverse byte order
-			gui.Main.wiiMode = true;
+			Main.wiiModes[pakIndex]=true;
+			LittleEndian.wiiMode=true;
 		}
 		raf.seek((numPakContents+1)*4);
 		int fileSize = LittleEndian.getInt(raf.readInt());
 		int actualFileSize = (int) pak.length();
 		raf.close();
-		if (fileSize==actualFileSize && numPakContents==252) return true;
+		if (fileSize==actualFileSize)
+		{
+			if (numPakContents==252) 
+			{
+				bt2Modes[pakIndex]=false;
+				int[] bt3Pos = {16,80,144,272,336,464,528,608,672};
+				System.arraycopy(bt3Pos, 0, FLOAT_SET_POSITIONS, 0, FLOAT_SET_POSITIONS.length);
+				return true;
+			}
+			else if (numPakContents==250)
+			{
+				bt2Modes[pakIndex]=true;
+				int[] bt2Pos = {12,60,108,204,252,348,396,456,504};
+				System.arraycopy(bt2Pos, 0, FLOAT_SET_POSITIONS, 0, FLOAT_SET_POSITIONS.length);
+				return true;
+			}
+			else return false;
+		}
 		return false;
 	}
-	public static boolean isValidGimmickParam(File dat) throws IOException
+	public static boolean isValidGimmickParam(File dat, int datIndex) throws IOException
 	{
 		byte[] gimmick = getGimmickParam(dat);
+		if (gimmick.length==896) //BT3 file size
+		{
+			bt2Modes[datIndex]=false;
+			int[] bt3Pos = {16,80,144,272,336,464,528,608,672};
+			System.arraycopy(bt3Pos, 0, FLOAT_SET_POSITIONS, 0, FLOAT_SET_POSITIONS.length);
+		}
+		else if (gimmick.length==704) //BT2 file size
+		{
+			bt2Modes[datIndex]=true;
+			int[] bt2Pos = {12,60,108,204,252,348,396,456,504};
+			System.arraycopy(bt2Pos, 0, FLOAT_SET_POSITIONS, 0, FLOAT_SET_POSITIONS.length);
+		}
+		else return false;
 		for (int i=0; i<16; i++)
 		{
 			//return false if there are no model parts in the header
@@ -38,8 +73,14 @@ public class GimmickParam
 			if (i==3)
 			{
 				//check for byte order based on the last byte of the first float
-				if (!(gimmick[i]>0x39 && gimmick[i]<0x4A)) gui.Main.wiiMode = true; //positive float
-				else if (!(gimmick[i]>0xB9 && gimmick[i]<0xCA)) gui.Main.wiiMode = true; //negative float
+				if (!(gimmick[i]>0x39 && gimmick[i]<0x4A)) //positive float 
+				{
+					Main.wiiModes[datIndex] = true; LittleEndian.wiiMode=true;
+				}
+				else if (!(gimmick[i]>0xB9 && gimmick[i]<0xCA)) //negative float
+				{
+					Main.wiiModes[datIndex] = true; LittleEndian.wiiMode=true;
+				}
 			}
 			//otherwise, make sure there is at least a valid one
 			if (gimmick[i]>=71 && gimmick[i]<=94) return true;
@@ -48,26 +89,32 @@ public class GimmickParam
 	}
 	public static byte[] getGimmickParam(File pakOrDat) throws IOException
 	{
-		int pos=0;
 		RandomAccessFile raf = new RandomAccessFile(pakOrDat,"rw");
+		int pos1=0, size=(int)raf.length();
 		if (pakOrDat.getName().toLowerCase().endsWith(".pak"))
 		{
 			raf.seek(92);
-			pos = LittleEndian.getInt(raf.readInt());
+			pos1 = LittleEndian.getInt(raf.readInt());
+			raf.seek(96);
+			int pos2 = LittleEndian.getInt(raf.readInt());
+			size=pos2-pos1;
+			System.out.println(pos2+","+pos1);
 		}
-		byte[] contents = new byte[752];
-		raf.seek(pos);
+		byte[] contents = new byte[size];
+		raf.seek(pos1);
 		raf.read(contents);
 		raf.close();
 		return contents;
 	}
-	public static JTable getGimmickTable(File pakOrDat) throws IOException
+	public static JTable getGimmickTable(File pakOrDat, int fileIndex) throws IOException
 	{
+		int headerSize=16;
+		if (bt2Modes[fileIndex]) headerSize=12;
 		byte[] gimmick = getGimmickParam(pakOrDat);
-		byte[] header = new byte[16];
+		byte[] header = new byte[headerSize];
 		int numModelParts=0;
 		String initialName = "GIMMICK_";
-		System.arraycopy(gimmick, 0, header, 0, 16);
+		System.arraycopy(gimmick, 0, header, 0, headerSize);
 		for (byte b: header)
 			if (b!=0) numModelParts++;
 		String[] modelPartNames = new String[numModelParts];
